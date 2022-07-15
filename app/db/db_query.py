@@ -101,7 +101,7 @@ class DataBase:
             data = cursor.fetchall()
             return data
 
-    def get_actors(self, actor_1: str, actor_2: str) -> set[str]:
+    def get_actors(self, actor_1: str, actor_2: str) -> list[str] | str:
         with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
             query = """
@@ -117,13 +117,24 @@ class DataBase:
             data = cursor.fetchall()
 
             list_with_sets_actors = []
-            start_set = {actor_1, actor_2}
+            start_set = {actor_1.title(), actor_2.title()}
+
             for row in data:
-                list_with_sets_actors.append(set(row[0].split(', ')))
+                list_with_sets_actors.append(set(row[0].split(', ')) - start_set)
             if len(list_with_sets_actors) > 2:
-                actors_test = set.intersection(*list_with_sets_actors)
-                return actors_test - start_set
-            return set('нет таких фильмов')
+                result_dict = {}
+                for row in list_with_sets_actors:
+                    for actor in row:
+                        if actor in result_dict.keys():
+                            result_dict[actor] += 1
+                        else:
+                            result_dict[actor] = 1
+                result = []
+                for actor, count in result_dict.items():
+                    if count > 2:
+                        result.append(f'{actor}:{count}')
+                return result
+            return 'нет таких фильмов'
 
     def get_films_by_params(self, type_movie: str, year: int, genre: str) -> list[tuple]:
         with sqlite3.connect(self.db_path) as connection:
@@ -145,5 +156,5 @@ class DataBase:
 
 if __name__ == '__main__':
     test = DataBase()
-    print(test.get_actors('Rose McIver', 'Ben Lamb'))
+    print(test.get_actors('talia shire', 'sylvester stallone'))
     print(test.get_films_by_params('TV Show', 2020, 'TV Shows'))
